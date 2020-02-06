@@ -1,1 +1,1 @@
-# stock-server-coursework
+# stock-server
