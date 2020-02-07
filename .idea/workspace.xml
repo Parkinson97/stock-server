@@ -15,7 +15,7 @@
     </option>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/stock-server-coursework" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="JsFlowSettings">
     <service-enabled>true</service-enabled>
@@ -58,7 +58,8 @@
       <updated>1580916621873</updated>
       <workItem from="1580916623221" duration="5527000" />
       <workItem from="1580923713083" duration="861000" />
-      <workItem from="1580934029036" duration="15209000" />
+      <workItem from="1580934029036" duration="16061000" />
+      <workItem from="1581031692115" duration="6806000" />
     </task>
     <servers />
   </component>

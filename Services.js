@@ -5,6 +5,7 @@ const User_1 = require("./entity/User");
 const Tools_1 = require("./Tools");
 const session_1 = require("./entity/session");
 const Stock_1 = require("./entity/Stock");
+const Cache_1 = require("./entity/Cache");
 var RepoService;
 (function (RepoService) {
     async function UserRepo() {
@@ -22,6 +23,11 @@ var RepoService;
         return connection.manager.getRepository(Stock_1.Stock);
     }
     RepoService.StockRepo = StockRepo;
+    async function CacheRepo() {
+        let connection = await index_1.getConnection();
+        return connection.manager.getRepository(Cache_1.Cache);
+    }
+    RepoService.CacheRepo = CacheRepo;
 })(RepoService = exports.RepoService || (exports.RepoService = {}));
 var LoginService;
 (function (LoginService) {
@@ -109,9 +115,16 @@ var StockService;
     }
     StockService.GetBySymbol = GetBySymbol;
     async function GetBySymbolFromExternal(symbol) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
+            var _a;
             // bylDVhjt292qu2Fvc09DeEaHFuu0M5bg8kb2YYhvzLfPkyvFQFcDbItTsXt3
             let url = 'https://api.worldtradingdata.com/api/v1/stock';
+            let key = `${url}?symbol=${symbol}&api_token=${apiKey}`;
+            let c = await CacheService.Fetch(key);
+            if ((_a = c) === null || _a === void 0 ? void 0 : _a.CheckValid()) {
+                resolve(JSON.parse(c.result));
+                return;
+            }
             const superagent = require('superagent');
             superagent.get(url)
                 .send({
@@ -119,13 +132,81 @@ var StockService;
                 api_token: apiKey
             })
                 .set('accept', 'json')
-                .end((err, res) => {
+                .end(async (err, res) => {
                 if (err)
                     reject(err);
-                resolve(JSON.parse(res.text));
+                else {
+                    await CacheService.Store(key, res.text);
+                    resolve(JSON.parse(res.text));
+                }
             });
         });
     }
     StockService.GetBySymbolFromExternal = GetBySymbolFromExternal;
+    async function searchExternal(searchQuery) {
+        return new Promise(async (resolve, reject) => {
+            var _a;
+            // bylDVhjt292qu2Fvc09DeEaHFuu0M5bg8kb2YYhvzLfPkyvFQFcDbItTsXt3
+            let url = 'https://api.worldtradingdata.com/api/v1/stock_search';
+            let key = `${url}?search_term=${searchQuery}&api_token=${apiKey}`;
+            let c = await CacheService.Fetch(key);
+            if ((_a = c) === null || _a === void 0 ? void 0 : _a.CheckValid()) {
+                resolve(JSON.parse(c.result));
+                return;
+            }
+            const superagent = require('superagent');
+            superagent.get(url)
+                .send({
+                search_term: searchQuery,
+                api_token: apiKey
+            })
+                .set('accept', 'json')
+                .end(async (err, res) => {
+                if (err)
+                    reject(err);
+                else {
+                    await CacheService.Store(key, res.text);
+                    resolve(JSON.parse(res.text));
+                }
+            });
+        });
+    }
+    StockService.searchExternal = searchExternal;
+    async function BuyBySymbol(symbol, quantity) {
+        //TODO: add call to db
+        return '';
+    }
+    StockService.BuyBySymbol = BuyBySymbol;
+    async function SellBySymbol(symbol, quant) {
+        //
+        return '';
+    }
+    StockService.SellBySymbol = SellBySymbol;
 })(StockService = exports.StockService || (exports.StockService = {}));
+var CacheService;
+(function (CacheService) {
+    async function Store(key, value) {
+        let repo = await RepoService.CacheRepo();
+        let c = await repo.findOne({
+            where: {
+                key: key
+            }
+        });
+        if (!c)
+            c = new Cache_1.Cache();
+        c.key = key;
+        c.result = value;
+        return await repo.save(c);
+    }
+    CacheService.Store = Store;
+    async function Fetch(key) {
+        let repo = await RepoService.CacheRepo();
+        return await repo.findOne({
+            where: {
+                key: key
+            }
+        });
+    }
+    CacheService.Fetch = Fetch;
+})(CacheService = exports.CacheService || (exports.CacheService = {}));
 //# sourceMappingURL=Services.js.map

@@ -2,8 +2,9 @@ import {getConnection} from "./index";
 import {User} from "./entity/User";
 import {makePassHash, randomString} from "./Tools";
 import {Session} from "./entity/session";
-import { Repository } from "typeorm";
+import {Repository} from "typeorm";
 import {Stock} from "./entity/Stock";
+import {Cache} from "./entity/Cache";
 
 export namespace RepoService{
     export async function UserRepo():Promise<Repository<User>>{
@@ -17,6 +18,10 @@ export namespace RepoService{
     export async function StockRepo():Promise<Repository<Stock>>{
         let connection = await getConnection();
         return connection.manager.getRepository(Stock);
+    }
+    export async function CacheRepo():Promise<Repository<Cache>>{
+        let connection = await getConnection();
+        return connection.manager.getRepository(Cache);
     }
 }
 
@@ -104,9 +109,17 @@ export namespace StockService{
     }
 
     export async function GetBySymbolFromExternal(symbol: string){
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // bylDVhjt292qu2Fvc09DeEaHFuu0M5bg8kb2YYhvzLfPkyvFQFcDbItTsXt3
             let url = 'https://api.worldtradingdata.com/api/v1/stock';
+            let key = `${url}?symbol=${symbol}&api_token=${apiKey}`;
+
+            let c = await CacheService.Fetch(key);
+
+            if(c?.CheckValid()){
+                resolve(JSON.parse(c.result));
+                return;
+            }
 
             const superagent = require('superagent');
 
@@ -116,13 +129,83 @@ export namespace StockService{
                     api_token: apiKey
                 })
                 .set('accept', 'json')
-                .end((err, res) => {
-                if(err) reject(err);
-                resolve(JSON.parse(res.text))
+                .end(async (err, res) => {
+                    if(err) reject(err);
+                    else{
+                        await CacheService.Store(key, res.text);
+                        resolve(JSON.parse(res.text))
+                    }
                 });
 
 
         })
 
+    }
+
+    export async function searchExternal(searchQuery: string):Promise<any> {
+        return new Promise(async (resolve, reject) => {
+            // bylDVhjt292qu2Fvc09DeEaHFuu0M5bg8kb2YYhvzLfPkyvFQFcDbItTsXt3
+            let url = 'https://api.worldtradingdata.com/api/v1/stock_search';
+            let key = `${url}?search_term=${searchQuery}&api_token=${apiKey}`;
+
+            let c = await CacheService.Fetch(key);
+
+            if(c?.CheckValid()){
+                resolve(JSON.parse(c.result));
+                return;
+            }
+
+            const superagent = require('superagent');
+
+            superagent.get(url)
+                .send({
+                    search_term: searchQuery,
+                    api_token: apiKey
+                })
+                .set('accept', 'json')
+                .end(async (err, res) => {
+                    if(err) reject(err);
+                    else{
+                        await CacheService.Store(key, res.text);
+                        resolve(JSON.parse(res.text))
+                    }
+                });
+
+
+        })
+    }
+    
+    export async function BuyBySymbol(symbol: string, quantity: number){
+        //TODO: add call to db
+        return '';
+    }
+
+    export async function SellBySymbol(symbol: string, quant: number){
+        //
+        return '';
+    }
+
+}
+
+export namespace CacheService{
+    export async function Store(key: string, value: string) {
+        let repo = await RepoService.CacheRepo();
+        let c = await repo.findOne({
+            where: {
+                key:key
+            }
+        });
+        if(!c) c = new Cache();
+        c.key = key;
+        c.result = value;
+        return await repo.save(c);
+    }
+    export async function Fetch(key: string) {
+        let repo = await RepoService.CacheRepo();
+        return await repo.findOne({
+            where: {
+                key: key
+            }
+        });
     }
 }
