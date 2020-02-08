@@ -7,8 +7,8 @@ const Stock_1 = require("./entity/Stock");
 const User_1 = require("./entity/User");
 const Share_1 = require("./entity/Share");
 const Cache_1 = require("./entity/Cache");
+let conn = null;
 async function getConnection() {
-    let conn = null;
     return new Promise((resolve, reject) => {
         if (conn != null) {
             resolve(conn);

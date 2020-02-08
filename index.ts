@@ -6,8 +6,9 @@ import {User} from "./entity/User";
 import {Share} from "./entity/Share";
 import {Cache} from "./entity/Cache";
 
+let conn = null;
+
 export async function getConnection():Promise<Connection> {
-    let conn = null;
     return new Promise((resolve, reject) => {
         if(conn != null){
             resolve(conn);
