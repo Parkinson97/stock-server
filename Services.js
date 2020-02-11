@@ -173,7 +173,9 @@ var StockService;
     }
     StockService.searchExternal = searchExternal;
     async function BuyBySymbol(symbol, quantity) {
-        //TODO: add call to db
+        //call db
+        //workout sum total
+        //
         return '';
     }
     StockService.BuyBySymbol = BuyBySymbol;
@@ -209,4 +211,10 @@ var CacheService;
     }
     CacheService.Fetch = Fetch;
 })(CacheService = exports.CacheService || (exports.CacheService = {}));
+var CurrencyConversion;
+(function (CurrencyConversion) {
+    async function Convert(from, to) {
+    }
+    CurrencyConversion.Convert = Convert;
+})(CurrencyConversion = exports.CurrencyConversion || (exports.CurrencyConversion = {}));
 //# sourceMappingURL=Services.js.map

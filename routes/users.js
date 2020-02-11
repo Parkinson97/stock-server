@@ -7,6 +7,7 @@ let router = require('express').Router();
 /* GET users listing. */
 //login without session token
 router.get('/authenticate', async function (req, res) {
+    console.log("inauth");
     let username = req.body['username'];
     let password = req.body['password'];
     if (Tools_1.isVoid(username)) {

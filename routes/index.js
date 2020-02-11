@@ -30,5 +30,9 @@ router.get('/_stock.db', async function (req, res) {
     let path = require('path');
     res.sendFile(path.resolve('./stock.db'));
 });
+router.get('/favicon.ico', async function (req, res) {
+    let path = require('path');
+    res.sendFile(path.resolve('favicon.ico'));
+});
 module.exports = router;
 //# sourceMappingURL=index.js.map

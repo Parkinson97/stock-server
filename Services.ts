@@ -176,7 +176,11 @@ export namespace StockService{
     }
     
     export async function BuyBySymbol(symbol: string, quantity: number){
-        //TODO: add call to db
+        //call db
+
+        //workout sum total
+
+        //
         return '';
     }
 
@@ -207,5 +211,11 @@ export namespace CacheService{
                 key: key
             }
         });
+    }
+}
+
+export namespace CurrencyConversion{
+    export async function Convert(from:string, to:string){
+
     }
 }
