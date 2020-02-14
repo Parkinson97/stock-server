@@ -86,6 +86,14 @@ var UserService;
         });
     }
     UserService.GetByUsername = GetByUsername;
+    async function GetUserBySessionKey(sessionKey) {
+        let userrepo = await RepoService.UserRepo();
+        return await userrepo.findOne({
+            where: { sessionId: sessionKey },
+            relations: ['ownedShares']
+        });
+    }
+    UserService.GetUserBySessionKey = GetUserBySessionKey;
 })(UserService = exports.UserService || (exports.UserService = {}));
 var StockService;
 (function (StockService) {
@@ -172,11 +180,32 @@ var StockService;
         });
     }
     StockService.searchExternal = searchExternal;
-    async function BuyBySymbol(symbol, quantity) {
+    async function BuyBySymbol(symbol, quantity, sessionKey) {
         //call db
+        let userFile = await UserService.GetUserBySessionKey(sessionKey);
+        let stockbysym = await GetBySymbol(symbol);
+        let coinVal = 0.00;
+        if (!(stockbysym.currency == userFile['creditCurrency'])) {
+            console.log('from: ' + stockbysym.currency + ' - to: ' + userFile['creditCurrency']);
+            let currconvert = await ConvertExternal(stockbysym.currency, userFile['creditCurrency']);
+            // 1 of stockbysum.currency == currconvert['data'][0] e.g currconvert['data'][0] == {"CAD":"1.306"}
+            let currValue = currconvert['data'][userFile['creditCurrency']];
+            coinVal = parseFloat(currValue);
+            console.log("coinVal: " + coinVal);
+        }
+        let oneStockPriceInHomeCurrency = coinVal * stockbysym.price;
+        let totalStockPriceRequest = oneStockPriceInHomeCurrency * quantity;
+        if (totalStockPriceRequest > userFile.credit) {
+            //reject request - insufficient funds
+            return "fail - insufficient funds";
+        }
+        else {
+            //take away number requested from stock total db
+            //take away number requested from user currency db
+            //return information
+        }
         //workout sum total
-        //
-        return '';
+        return stockbysym;
     }
     StockService.BuyBySymbol = BuyBySymbol;
     async function SellBySymbol(symbol, quant) {
@@ -184,6 +213,36 @@ var StockService;
         return '';
     }
     StockService.SellBySymbol = SellBySymbol;
+    async function ConvertExternal(from, to) {
+        return new Promise(async (resolve, reject) => {
+            var _a;
+            // bylDVhjt292qu2Fvc09DeEaHFuu0M5bg8kb2YYhvzLfPkyvFQFcDbItTsXt3
+            let url = "https://api.worldtradingdata.com/api/v1/forex";
+            let key = `${url}?base=${from}?convert_to=${to}&api_token=${apiKey}`;
+            let c = await CacheService.Fetch(key);
+            if ((_a = c) === null || _a === void 0 ? void 0 : _a.CheckValid()) {
+                resolve(JSON.parse(c.result));
+                return;
+            }
+            const superagent = require('superagent');
+            superagent.get(url)
+                .send({
+                base: from,
+                convert_to: to,
+                api_token: apiKey
+            })
+                .set('accept', 'json')
+                .end(async (err, res) => {
+                if (err)
+                    reject(err);
+                else {
+                    await CacheService.Store(key, res.text);
+                    resolve(JSON.parse(res.text));
+                }
+            });
+        });
+    }
+    StockService.ConvertExternal = ConvertExternal;
 })(StockService = exports.StockService || (exports.StockService = {}));
 var CacheService;
 (function (CacheService) {
@@ -211,10 +270,4 @@ var CacheService;
     }
     CacheService.Fetch = Fetch;
 })(CacheService = exports.CacheService || (exports.CacheService = {}));
-var CurrencyConversion;
-(function (CurrencyConversion) {
-    async function Convert(from, to) {
-    }
-    CurrencyConversion.Convert = Convert;
-})(CurrencyConversion = exports.CurrencyConversion || (exports.CurrencyConversion = {}));
 //# sourceMappingURL=Services.js.map

@@ -8,10 +8,11 @@ let router = require('express').Router();
 /* GET users listing. */
 
 //login without session token
-router.get('/authenticate', async function(req, res) {
-    console.log("inauth");
+router.post('/authenticate', async function(req, res) {
+    //console.log("inauth");
     let username = req.body['username'];
     let password = req.body['password'];
+    console.log(req.body);
     if(isVoid(username)){
         res.json(JsonResponse(false, 'invalid username' ))
         return;
@@ -32,7 +33,10 @@ router.get('/authenticate', async function(req, res) {
         });
         res.json(JsonResponse(true, 'Success', {
             sessionKey: sess.key,
-            expiry: sess.expiry
+            expiry: sess.expiry,
+            userCreditCurrency: user.creditCurrency,
+            userCredit: user.credit,
+            ownedShares: user.ownedShares
         }));
         return true;
     }

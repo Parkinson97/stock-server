@@ -80,6 +80,13 @@ export namespace UserService{
             relations: ['ownedShares']
         });
     }
+    export async function GetUserBySessionKey(sessionKey:string){
+        let userrepo = await RepoService.UserRepo();
+        return await userrepo.findOne({
+            where: {sessionId: sessionKey},
+            relations: ['ownedShares']
+        })
+    }
 }
 
 export namespace StockService{
@@ -175,19 +182,77 @@ export namespace StockService{
         })
     }
     
-    export async function BuyBySymbol(symbol: string, quantity: number){
+    export async function BuyBySymbol(symbol: string, quantity: number, sessionKey:string){
         //call db
+        let userFile = await UserService.GetUserBySessionKey(sessionKey);
+        let stockbysym = await GetBySymbol(symbol);
+        let coinVal = 0.00;
+        if(!(stockbysym.currency == userFile['creditCurrency'])){
+            console.log('from: ' + stockbysym.currency + ' - to: ' + userFile['creditCurrency']);
+            let currconvert = await ConvertExternal(stockbysym.currency, userFile['creditCurrency']);
+            // 1 of stockbysum.currency == currconvert['data'][0] e.g currconvert['data'][0] == {"CAD":"1.306"}
+            let currValue = currconvert['data'][userFile['creditCurrency']];
+            coinVal = parseFloat(currValue);
+            console.log("coinVal: "+coinVal);
+        }
+        let oneStockPriceInHomeCurrency = coinVal*stockbysym.price;
+        let totalStockPriceRequest = oneStockPriceInHomeCurrency*quantity;
+        if(totalStockPriceRequest>userFile.credit){
+            //reject request - insufficient funds
+            return "fail - insufficient funds"
+        }else{
+            //take away number requested from stock total db
+
+            //take away number requested from user currency db
+
+            //return information
+        }
 
         //workout sum total
-
-        //
-        return '';
+        return stockbysym;
     }
 
     export async function SellBySymbol(symbol: string, quant: number){
         //
         return '';
     }
+
+    export async function ConvertExternal(from: string, to:string){
+        return new Promise(async (resolve, reject) => {
+            // bylDVhjt292qu2Fvc09DeEaHFuu0M5bg8kb2YYhvzLfPkyvFQFcDbItTsXt3
+            let url = "https://api.worldtradingdata.com/api/v1/forex";
+            let key = `${url}?base=${from}?convert_to=${to}&api_token=${apiKey}`;
+
+            let c = await CacheService.Fetch(key);
+
+            if(c?.CheckValid()){
+                resolve(JSON.parse(c.result));
+                return;
+            }
+
+            const superagent = require('superagent');
+
+            superagent.get(url)
+                .send({
+                    base: from,
+                    convert_to: to,
+                    api_token: apiKey
+                })
+                .set('accept', 'json')
+                .end(async (err, res) => {
+                    if(err) reject(err);
+                    else{
+                        await CacheService.Store(key, res.text);
+                        resolve(JSON.parse(res.text))
+                    }
+                });
+
+
+        })
+
+    }
+
+
 
 }
 
@@ -211,11 +276,5 @@ export namespace CacheService{
                 key: key
             }
         });
-    }
-}
-
-export namespace CurrencyConversion{
-    export async function Convert(from:string, to:string){
-
     }
 }
