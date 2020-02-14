@@ -195,7 +195,7 @@ export namespace StockService{
         });
         stock.sharesTotal = stock.sharesTotal - newShare.quantity;
         stock.shares.push(newShare);
-        console.log("NEWSTOCK: " + stock);
+        //console.log("NEWSTOCK: " + stock);
         await stockrepo.save(stock);
     }
 
@@ -209,7 +209,7 @@ export namespace StockService{
         user.ownedShares.push(newShare);
         // user.sharesTotal = user.sharesTotal - newShare.quantity;
         // user.shares.push(newShare);
-        console.log("NEWuserfle: " + user);
+        //console.log("NEWuserfle: " + user);
         await userrepo.save(user);
     }
 
@@ -245,7 +245,7 @@ export namespace StockService{
             // stockRepo.sharesTotal = stockbysym.sharesTotal - newShare.quantity;
             // stockRepo.shares.push(newShare);
             // await stockRepo.save();
-            await saveStockBySymbol(stockbysym.symbol, newShare);
+            //await saveStockBySymbol(stockbysym.symbol, newShare);
             //take away number requested from user currency db
             userFile.credit = userFile.credit - totalStockPriceRequest;
             userFile.ownedShares.push(newShare);
