@@ -6,6 +6,7 @@ const Tools_1 = require("./Tools");
 const session_1 = require("./entity/session");
 const Stock_1 = require("./entity/Stock");
 const Cache_1 = require("./entity/Cache");
+const Share_1 = require("./entity/Share");
 var RepoService;
 (function (RepoService) {
     async function UserRepo() {
@@ -28,6 +29,11 @@ var RepoService;
         return connection.manager.getRepository(Cache_1.Cache);
     }
     RepoService.CacheRepo = CacheRepo;
+    async function ShareRepo() {
+        let connection = await index_1.getConnection();
+        return connection.manager.getRepository(Share_1.Share);
+    }
+    RepoService.ShareRepo = ShareRepo;
 })(RepoService = exports.RepoService || (exports.RepoService = {}));
 var LoginService;
 (function (LoginService) {
@@ -180,10 +186,37 @@ var StockService;
         });
     }
     StockService.searchExternal = searchExternal;
+    async function saveStockBySymbol(symb, newShare) {
+        let stockrepo = await RepoService.StockRepo();
+        let stock = await stockrepo.findOne({
+            where: { symbol: symb },
+            relations: ['shares']
+        });
+        stock.sharesTotal = stock.sharesTotal - newShare.quantity;
+        stock.shares.push(newShare);
+        console.log("NEWSTOCK: " + stock);
+        await stockrepo.save(stock);
+    }
+    StockService.saveStockBySymbol = saveStockBySymbol;
+    async function saveUserBySessionKey(sessionKey, newShare, totalStockPriceRequest) {
+        let userrepo = await RepoService.UserRepo();
+        let user = await userrepo.findOne({
+            where: { symbol: sessionKey },
+            relations: ['ownedShares']
+        });
+        user.credit = user.credit - totalStockPriceRequest;
+        user.ownedShares.push(newShare);
+        // user.sharesTotal = user.sharesTotal - newShare.quantity;
+        // user.shares.push(newShare);
+        //console.log("NEWuserfle: " + user);
+        await userrepo.save(user);
+    }
+    StockService.saveUserBySessionKey = saveUserBySessionKey;
     async function BuyBySymbol(symbol, quantity, sessionKey) {
         //call db
         let userFile = await UserService.GetUserBySessionKey(sessionKey);
         let stockbysym = await GetBySymbol(symbol);
+        let stockRepo = await GetBySymbol(symbol);
         let coinVal = 0.00;
         if (!(stockbysym.currency == userFile['creditCurrency'])) {
             console.log('from: ' + stockbysym.currency + ' - to: ' + userFile['creditCurrency']);
@@ -200,12 +233,29 @@ var StockService;
             return "fail - insufficient funds";
         }
         else {
+            let newShare = new Share_1.Share();
+            newShare.stock = stockbysym;
+            newShare.boughtPrice = totalStockPriceRequest;
+            newShare.user = userFile;
+            newShare.currency = stockbysym.currency;
+            newShare.quantity = quantity;
+            newShare.updatedAt = new Date();
             //take away number requested from stock total db
+            // stockRepo.sharesTotal = stockbysym.sharesTotal - newShare.quantity;
+            // stockRepo.shares.push(newShare);
+            // await stockRepo.save();
+            await saveStockBySymbol(stockbysym.symbol, newShare);
             //take away number requested from user currency db
+            userFile.credit = userFile.credit - totalStockPriceRequest;
+            userFile.ownedShares.push(newShare);
+            await saveUserBySessionKey(sessionKey, newShare, totalStockPriceRequest);
             //return information
+            let jsonObj = "{'newShare':" + newShare + ", 'newUserCredits:'" + userFile.credit + "}";
+            console.log(jsonObj);
+            return jsonObj;
         }
         //workout sum total
-        return stockbysym;
+        return "ERROR";
     }
     StockService.BuyBySymbol = BuyBySymbol;
     async function SellBySymbol(symbol, quant) {
